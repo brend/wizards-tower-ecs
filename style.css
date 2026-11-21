@@ -1,0 +1,18 @@
+body {
+  margin: 0;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  background: #0b1020;
+}
+
+#container {
+  max-width: min(100%, calc(100dvh * var(--scene-aspect)));
+}
+
+#gameViewport {
+  display: block;
+  max-width: 100%;
+  height: auto !important;
+  image-rendering: pixelated;
+}
