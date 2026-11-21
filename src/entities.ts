@@ -25,7 +25,7 @@ export function spawnOrk(world: World): Entity {
     new Position(0, 126),
     new Health(2),
     new Animated(),
-    new Enemy(),
+    new Enemy(16),
   );
 }
 
@@ -41,6 +41,6 @@ export function spawnFireball(
     new Position(x, y),
     new Target(tx, ty),
     new Animated(),
-    new Projectile(),
+    new Projectile(120),
   );
 }

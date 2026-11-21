@@ -31,7 +31,7 @@ export class GameScene implements Scene {
     this.spawnFireballs(dt);
     this.updateAnimations(dt);
     this.moveEnemies(dt);
-    this.moveProjectiles();
+    this.moveProjectiles(dt);
     this.handleCollisions();
   }
 
@@ -95,16 +95,15 @@ export class GameScene implements Scene {
       });
 
       let targetPosition: Position | undefined;
-
       this.world.each([Enemy, Position], (_, _e, p) => {
-        targetPosition = p;
+        targetPosition ??= p;
 // TODO: Exit after target has been found
       });
 
       if (sourcePosition && targetPosition) {
         const { x, y } = sourcePosition;
         const { x: tx, y: ty } = targetPosition;
-        this.defer(() => spawnFireball(this.world, x, y, tx, ty));
+        this.defer(() => spawnFireball(this.world, x, y, tx + 32, ty));
       }
 
       this.fireballTimer = 0;
@@ -118,19 +117,26 @@ export class GameScene implements Scene {
   }
 
   private moveEnemies(dt: number): void {
-    this.world.each([Position, Enemy], (_, p, _e) => {
-      p.x += 10 * dt;
+    this.world.each([Position, Enemy], (_, p, e) => {
+      p.x += e.speed * dt;
     });
   }
 
-  private moveProjectiles(): void {
-    this.world.each([Position, Target], (_, p, t) => {
+  private moveProjectiles(dt: number): void {
+    this.world.each([Position, Target, Projectile], (e, p, t, f) => {
       const dx = t.x - p.x;
       const dy = t.y - p.y;
       const angle = Math.atan2(dy, dx);
-      const speed = 10;
+      const speed = f.speed * dt;
       p.x += speed * Math.cos(angle);
       p.y += speed * Math.sin(angle);
+
+      if (
+        Math.round(p.x) === Math.round(t.x) &&
+        Math.round(p.y) === Math.round(t.y)
+      ) {
+        this.defer(() => this.world.destroy(e));
+      }
     });
   }
 

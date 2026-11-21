@@ -42,8 +42,12 @@ export class Health {
 
 export class Animated { }
 
-export class Enemy { }
+export class Enemy {
+  constructor(public speed: number) { }
+}
 
-export class Projectile { }
+export class Projectile {
+  constructor(public speed: number) { }
+}
 
 export class FireballHurler { }
