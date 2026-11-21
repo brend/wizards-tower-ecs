@@ -22,7 +22,7 @@ export class Position {
   constructor(public x = 0, public y = 0) { }
 }
 
-export class Target {
+export class Destination {
   constructor(public x = 0, public y = 0) { }
 }
 
@@ -42,12 +42,28 @@ export class Health {
 
 export class Animated { }
 
-export class Enemy {
-  constructor(public speed: number) { }
-}
+export class Enemy { }
 
 export class Projectile {
-  constructor(public speed: number) { }
+  constructor(public damage: number) { }
 }
 
 export class FireballHurler { }
+
+export class Attack {
+  public cooldownTimer = 0;
+  constructor(public damage: number, public range: number, public interval: number) { }
+  cooldown(dt: number): void {
+    this.cooldownTimer += dt;
+  }
+  get isReady(): boolean {
+    return this.cooldownTimer >= this.interval;
+  }
+  reset(): void {
+    this.cooldownTimer = 0;
+  }
+}
+
+export class Movement {
+  constructor(public speed: number) { }
+}

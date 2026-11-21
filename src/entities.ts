@@ -1,5 +1,5 @@
 import { Entity, World } from "@waldrumpus/orb";
-import { Animated, Enemy, FireballHurler, Health, Position, Projectile, Sprite, Target } from "./components";
+import { Animated, Attack, Enemy, FireballHurler, Health, Position, Projectile, Sprite, Destination, Movement } from "./components";
 
 const width = 320;
 
@@ -24,8 +24,11 @@ export function spawnOrk(world: World): Entity {
     new Sprite("assets/Ork.png", 2),
     new Position(0, 126),
     new Health(2),
+    new Attack(1, 1, 2),
     new Animated(),
-    new Enemy(16),
+    new Enemy(),
+    new Movement(16),
+    new Destination(width - 64, 126),
   );
 }
 
@@ -39,8 +42,9 @@ export function spawnFireball(
   return world.create(
     new Sprite("assets/Fireball.png", 2),
     new Position(x, y),
-    new Target(tx, ty),
+    new Destination(tx, ty),
     new Animated(),
-    new Projectile(120),
+    new Projectile(1),
+    new Movement(120),
   );
 }

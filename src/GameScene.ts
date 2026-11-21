@@ -1,5 +1,5 @@
 import { type Scene, World, Sprite as OrbSprite, Entity } from "@waldrumpus/orb";
-import { Sprite, Position, Animated, Enemy, FireballHurler, Target, Health, Projectile } from "./components";
+import { Sprite, Position, Animated, Enemy, FireballHurler, Destination, Health, Projectile, Movement, Attack } from "./components";
 import { spawnFireball, spawnOrk, spawnTower, spawnWizard } from "./entities";
 
 export class GameScene implements Scene {
@@ -30,6 +30,7 @@ export class GameScene implements Scene {
     this.spawnEnemies(dt);
     this.spawnFireballs(dt);
     this.updateAnimations(dt);
+    this.resolveEnemyAttacks(dt);
     this.moveEnemies(dt);
     this.moveProjectiles(dt);
     this.handleCollisions();
@@ -51,26 +52,28 @@ export class GameScene implements Scene {
 
   private handleCollisions(): void {
     const enemies: Array<{ entity: Entity, position: Position, health: Health }> = [];
-    const projectiles: Array<{ entity: Entity, position: Position, remainingHits: number }> = [];
+    const projectiles: Array<{ entity: Entity, position: Position, damage: number, remainingHits: number }> = [];
 
     this.world.each([Enemy, Position, Health], (e, _, p, h) => {
       enemies.push({ entity: e, position: p, health: h });
     });
 
-    this.world.each([Projectile, Position], (e, _, p) => {
-      projectiles.push({ entity: e, position: p, remainingHits: 1 });
+    this.world.each([Projectile, Position], (e, f, p) => {
+      projectiles.push({ entity: e, position: p, damage: f.damage, remainingHits: 1 });
     });
 
     for (const p of projectiles) {
       for (const e of enemies) {
+        if (e.health.hp <= 0) continue;
         const dx = e.position.x - p.position.x;
         const dy = e.position.y - p.position.y;
         const d = Math.sqrt(dx * dx + dy * dy);
         if (d < 4) {
-          e.health.reduce(1);
+          e.health.reduce(p.damage);
           p.remainingHits -= 1;
           if (p.remainingHits <= 0) {
             this.defer(() => this.world.destroy(p.entity));
+            break;
           }
         }
       }
@@ -117,21 +120,38 @@ export class GameScene implements Scene {
   }
 
   private moveEnemies(dt: number): void {
-    this.world.each([Position, Enemy], (_, p, e) => {
-      p.x += e.speed * dt;
+    this.world.each([Position, Destination, Movement, Enemy], (enemy, p, t, m) => {
+      p.x += m.speed * dt;
+      if (p.x >= t.x) {
+        p.x = t.x;
+        this.defer(() => this.world.remove(enemy, t));
+      }
+    });
+  }
+
+  private resolveEnemyAttacks(dt: number): void {
+    const readyAttacks = [];
+
+    this.world.each([Enemy, Attack], (_, _e, a) => {
+      a.cooldown(dt);
+      if (a.isReady) {
+        // TODO: Perform the attack
+        a.reset();
+      }
     });
   }
 
   private moveProjectiles(dt: number): void {
-    this.world.each([Position, Target, Projectile], (e, p, t, f) => {
+    this.world.each([Position, Destination, Movement, Projectile], (e, p, t, m) => {
       const dx = t.x - p.x;
       const dy = t.y - p.y;
       const distance = Math.hypot(dx, dy);
-      const step = f.speed * dt;
+      const step = m.speed * dt;
       if (step >= distance) {
         p.x = t.x;
         p.y = t.y;
         this.defer(() => this.world.destroy(e));
+        return;
       }
 
       const fraction = step / distance;
