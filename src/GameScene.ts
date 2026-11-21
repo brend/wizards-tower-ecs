@@ -126,17 +126,17 @@ export class GameScene implements Scene {
     this.world.each([Position, Target, Projectile], (e, p, t, f) => {
       const dx = t.x - p.x;
       const dy = t.y - p.y;
-      const angle = Math.atan2(dy, dx);
-      const speed = f.speed * dt;
-      p.x += speed * Math.cos(angle);
-      p.y += speed * Math.sin(angle);
-
-      if (
-        Math.round(p.x) === Math.round(t.x) &&
-        Math.round(p.y) === Math.round(t.y)
-      ) {
+      const distance = Math.hypot(dx, dy);
+      const step = f.speed * dt;
+      if (step >= distance) {
+        p.x = t.x;
+        p.y = t.y;
         this.defer(() => this.world.destroy(e));
       }
+
+      const fraction = step / distance;
+      p.x += dx * fraction;
+      p.y += dy * fraction;
     });
   }
 
