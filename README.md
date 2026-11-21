@@ -1,8 +1,8 @@
-# Orb game template
+# Wizard's Tower
 
-A TypeScript and Vite starter for browser games using `@waldrumpus/orb`. The starter scene draws a moving square on Orb’s canvas.
+Welcome to the Wizard's Tower! 
 
-From the root of the Orb checkout, copy the template to a new directory. Use Node.js 20.19+ on the 20.x line, or 22.12+.
+Defend it or succumb to the Orks!
 
 ```sh
 cp -R templates/game ../my-game
