@@ -22,4 +22,28 @@ export class Position {
   constructor(public x = 0, public y = 0) { }
 }
 
+export class Target {
+  constructor(public x = 0, public y = 0) { }
+}
+
+export class Health {
+  constructor(public hp: number, public maxHp = hp) { }
+  get percentage(): number {
+    return this.hp / this.maxHp;
+  }
+  reduce(amount: number): void {
+    if (amount <= this.hp) {
+      this.hp -= amount;
+    } else {
+      this.hp = 0;
+    }
+  }
+}
+
 export class Animated { }
+
+export class Enemy { }
+
+export class Projectile { }
+
+export class FireballHurler { }

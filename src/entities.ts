@@ -1,0 +1,46 @@
+import { Entity, World } from "@waldrumpus/orb";
+import { Animated, Enemy, FireballHurler, Health, Position, Projectile, Sprite, Target } from "./components";
+
+const width = 320;
+
+export function spawnWizard(world: World): Entity {
+  return world.create(
+    new Sprite("assets/Wizard.png", 4),
+    new Position(width - 58, 38),
+    new Animated(),
+    new FireballHurler(),
+  );
+}
+
+export function spawnTower(world: World): Entity {
+  return world.create(
+    new Sprite("assets/Tower.png"),
+    new Position(width - 64, 32),
+  );
+}
+
+export function spawnOrk(world: World): Entity {
+  return world.create(
+    new Sprite("assets/Ork.png", 2),
+    new Position(0, 126),
+    new Health(2),
+    new Animated(),
+    new Enemy(),
+  );
+}
+
+export function spawnFireball(
+  world: World,
+  x: number,
+  y: number,
+  tx: number,
+  ty: number,
+): Entity {
+  return world.create(
+    new Sprite("assets/Fireball.png", 2),
+    new Position(x, y),
+    new Target(tx, ty),
+    new Animated(),
+    new Projectile(),
+  );
+}
