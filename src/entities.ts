@@ -10,6 +10,7 @@ import {
   Destination,
   Movement,
   SineFlight,
+  RangedAttack,
 } from "./components";
 
 const width = 320;
@@ -53,22 +54,27 @@ export function spawnGargoyle(world: World): Entity {
     new Movement(16),
     new Destination(width - 96, 60),
     new SineFlight(4, 32, 0),
+    new RangedAttack(),
   );
 }
 
-export function spawnFireball(
+export function spawnProjectile(
   world: World,
   x: number,
   y: number,
   tx: number,
   ty: number,
+  target: Entity | undefined = undefined,
+  damage = 1,
+  spritesheet = "assets/Fireball.png",
+  frameCount = 2
 ): Entity {
   return world.create(
-    new Sprite("assets/Fireball.png", 2),
+    new Sprite(spritesheet, frameCount),
     new Position(x, y),
     new Destination(tx, ty),
     new Animated(),
-    new Projectile(1),
+    new Projectile(damage, target),
     new Movement(120),
   );
 }

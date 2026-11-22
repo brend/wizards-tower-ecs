@@ -1,4 +1,4 @@
-import { Sprite as OrbSprite } from "@waldrumpus/orb";
+import { Entity, Sprite as OrbSprite } from "@waldrumpus/orb";
 
 export class Sprite {
   private readonly sprite: OrbSprite;
@@ -59,7 +59,10 @@ export class Enemy {
 }
 
 export class Projectile {
-  constructor(public damage: number) {}
+  constructor(
+    public damage: number,
+    public target: Entity | undefined = undefined,
+  ) {}
 }
 
 export class FireballHurler {}
@@ -80,6 +83,8 @@ export class Attack {
     this.cooldownTimer = 0;
   }
 }
+
+export class RangedAttack {}
 
 export class Movement {
   constructor(public speed: number) {}

@@ -17,8 +17,15 @@ import {
   Attack,
   Jitter,
   SineFlight,
+  RangedAttack,
 } from "./components";
-import { spawnFireball, spawnGargoyle, spawnOrk, spawnTower, spawnWizard } from "./entities";
+import {
+  spawnProjectile,
+  spawnGargoyle,
+  spawnOrk,
+  spawnTower,
+  spawnWizard,
+} from "./entities";
 import { clamp, randomInRange } from "./math";
 
 export class GameScene implements Scene {
@@ -82,6 +89,7 @@ export class GameScene implements Scene {
       position: Position;
       damage: number;
       remainingHits: number;
+      target: Entity | undefined;
     }> = [];
 
     this.world.each([Enemy, Position, Health], (e, _, p, h) => {
@@ -89,15 +97,36 @@ export class GameScene implements Scene {
     });
 
     this.world.each([Projectile, Position], (e, f, p) => {
+      if (f.target !== undefined) return;
       projectiles.push({
         entity: e,
         position: p,
         damage: f.damage,
         remainingHits: 1,
+        target: f.target,
       });
     });
 
     for (const p of projectiles) {
+      if (p.target) {
+        const targetPosition = this.world.get(p.target, Position);
+        const targetHealth = this.world.get(p.target, Health);
+        if (targetPosition && targetHealth) {
+          const dx = targetPosition.x - p.position.x;
+          const dy = targetPosition.y - p.position.y;
+          const d = Math.sqrt(dx * dx + dy * dy);
+          if (d < 2) {
+            targetHealth.reduce(p.damage);
+            p.remainingHits -= 1;
+            if (p.remainingHits <= 0) {
+              this.defer(() => this.world.destroy(p.entity));
+              continue;
+            }
+          }
+          continue;
+        }
+      }
+
       for (const e of enemies) {
         if (e.health.hp <= 0) continue;
         const dx = e.position.x - p.position.x;
@@ -142,7 +171,7 @@ export class GameScene implements Scene {
       if (sourcePosition && targetPosition) {
         const { x, y } = sourcePosition;
         const { x: tx, y: ty } = targetPosition;
-        this.defer(() => spawnFireball(this.world, x, y, tx + 32, ty));
+        this.defer(() => spawnProjectile(this.world, x, y, tx + 32, ty));
       }
 
       this.fireballTimer = 0;
@@ -173,7 +202,8 @@ export class GameScene implements Scene {
           const remaining = destination.x - position.x;
           const fade = Math.min(1, remaining / (flight.wavelength / 2));
 
-          position.y = destination.y + Math.sin(phase) * flight.amplitude * fade;
+          position.y =
+            destination.y + Math.sin(phase) * flight.amplitude * fade;
         }
 
         if (position.x >= destination.x) {
@@ -192,29 +222,52 @@ export class GameScene implements Scene {
   }
 
   private resolveEnemyAttacks(dt: number): void {
-    const readyAttacks: Attack[] = [];
+    const readyAttacks: Array<{
+      attack: Attack;
+      position: Position;
+      isRanged: boolean;
+    }> = [];
 
-    this.world.each([Enemy, Attack], (_, _e, a) => {
-      a.cooldown(dt);
-      if (a.isReady) {
-        readyAttacks.push(a);
+    this.world.each([Enemy, Attack, Position], (e, _, attack, position) => {
+      attack.cooldown(dt);
+      if (attack.isReady) {
+        readyAttacks.push({
+          attack,
+          position,
+          isRanged: this.world.get(e, RangedAttack) !== undefined,
+        });
       }
     });
 
     if (readyAttacks.length === 0) return;
 
     const towerHealth = this.world.get(this.tower, Health)!;
+    const towerPosition = this.world.get(this.tower, Position)!;
 
     for (const a of readyAttacks) {
-      towerHealth.reduce(a.damage);
-      a.reset();
+      if (a.isRanged) {
+        spawnProjectile(
+          this.world,
+          a.position.x,
+          a.position.y,
+          towerPosition.x,
+          towerPosition.y,
+          this.tower,
+          a.attack.damage,
+          "assets/Trident.png",
+          1,
+        );
+      } else {
+        towerHealth.reduce(a.attack.damage);
+      }
+      a.attack.reset();
     }
   }
 
   private moveProjectiles(dt: number): void {
     this.world.each(
       [Position, Destination, Movement, Projectile],
-      (e, p, t, m) => {
+      (e, p, t, m, projectile) => {
         const dx = t.x - p.x;
         const dy = t.y - p.y;
         const distance = Math.hypot(dx, dy);
@@ -222,6 +275,11 @@ export class GameScene implements Scene {
         if (step >= distance) {
           p.x = t.x;
           p.y = t.y;
+          if (projectile.target !== undefined) {
+            this.world
+              .get(projectile.target, Health)
+              ?.reduce(projectile.damage);
+          }
           this.defer(() => this.world.destroy(e));
           return;
         }
@@ -256,12 +314,12 @@ export class GameScene implements Scene {
       s.render(ctx, p.x + j.x, p.y + j.y);
     });
     this.renderGround(ctx);
-    // this.world.each([Position, Health], (_, p, h) => {
-    //   ctx.strokeStyle = "red";
-    //   ctx.fillStyle = "red";
-    //   ctx.strokeRect(p.x, p.y + 16, 16, 4);
-    //   ctx.fillRect(p.x, p.y + 16, 16 * h.percentage, 4);
-    // });
+    this.world.each([Position, Health], (_, p, h) => {
+      ctx.strokeStyle = "red";
+      ctx.fillStyle = "red";
+      ctx.strokeRect(p.x, p.y + 16, 16, 4);
+      ctx.fillRect(p.x, p.y + 16, 16 * h.percentage, 4);
+    });
   }
 
   private renderGround(ctx: CanvasRenderingContext2D): void {

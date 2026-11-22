@@ -1,0 +1,11 @@
+[
+  {
+    "label": "Debug game in Edge",
+    "adapter": "JavaScript",
+    "type": "pwa-msedge",
+    "request": "launch",
+    "url": "http://127.0.0.1:5173/",
+    "webRoot": "$ZED_WORKTREE_ROOT",
+    "sourceMaps": true
+  }
+]
