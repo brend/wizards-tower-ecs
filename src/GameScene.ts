@@ -16,8 +16,9 @@ import {
   Movement,
   Attack,
   Jitter,
+  SineFlight,
 } from "./components";
-import { spawnFireball, spawnOrk, spawnTower, spawnWizard } from "./entities";
+import { spawnFireball, spawnGargoyle, spawnOrk, spawnTower, spawnWizard } from "./entities";
 import { clamp, randomInRange } from "./math";
 
 export class GameScene implements Scene {
@@ -117,7 +118,8 @@ export class GameScene implements Scene {
   private spawnEnemies(dt: number): void {
     this.enemyTimer += dt;
     if (this.enemyTimer >= 3) {
-      spawnOrk(this.world);
+      //spawnOrk(this.world);
+      spawnGargoyle(this.world);
       this.enemyTimer = 0;
     }
   }
@@ -162,7 +164,18 @@ export class GameScene implements Scene {
     this.world.each(
       [Position, Destination, Movement, Enemy],
       (e, position, destination, movement, enemy) => {
-        position.x += movement.speed * dt;
+        position.x = Math.min(position.x + movement.speed * dt, destination.x);
+
+        const flight = this.world.get(e, SineFlight);
+        if (flight) {
+          const traveled = position.x - flight.startX;
+          const phase = (traveled / flight.wavelength) * 2 * Math.PI;
+          const remaining = destination.x - position.x;
+          const fade = Math.min(1, remaining / (flight.wavelength / 2));
+
+          position.y = destination.y + Math.sin(phase) * flight.amplitude * fade;
+        }
+
         if (position.x >= destination.x) {
           position.x = destination.x;
           this.defer(() => {
@@ -243,12 +256,12 @@ export class GameScene implements Scene {
       s.render(ctx, p.x + j.x, p.y + j.y);
     });
     this.renderGround(ctx);
-    this.world.each([Position, Health], (_, p, h) => {
-      ctx.strokeStyle = "red";
-      ctx.fillStyle = "red";
-      ctx.strokeRect(p.x, p.y + 16, 16, 4);
-      ctx.fillRect(p.x, p.y + 16, 16 * h.percentage, 4);
-    });
+    // this.world.each([Position, Health], (_, p, h) => {
+    //   ctx.strokeStyle = "red";
+    //   ctx.fillStyle = "red";
+    //   ctx.strokeRect(p.x, p.y + 16, 16, 4);
+    //   ctx.fillRect(p.x, p.y + 16, 16 * h.percentage, 4);
+    // });
   }
 
   private renderGround(ctx: CanvasRenderingContext2D): void {

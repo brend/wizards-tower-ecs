@@ -9,6 +9,7 @@ import {
   Sprite,
   Destination,
   Movement,
+  SineFlight,
 } from "./components";
 
 const width = 320;
@@ -39,6 +40,19 @@ export function spawnOrk(world: World): Entity {
     new Enemy(1, 3),
     new Movement(16),
     new Destination(width - 64, 126),
+  );
+}
+
+export function spawnGargoyle(world: World): Entity {
+  return world.create(
+    new Sprite("assets/Gargoyle.png", 2),
+    new Position(0, 60),
+    new Health(2),
+    new Animated(),
+    new Enemy(1, 3),
+    new Movement(16),
+    new Destination(width - 96, 60),
+    new SineFlight(4, 32, 0),
   );
 }
 

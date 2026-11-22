@@ -91,3 +91,11 @@ export class Jitter {
     public y = 0,
   ) {}
 }
+
+export class SineFlight {
+  constructor(
+    public amplitude: number,
+    public wavelength: number,
+    public startX: number,
+  ) {}
+}
