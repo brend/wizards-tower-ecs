@@ -7,6 +7,10 @@ export class Sprite {
     this.sprite = new OrbSprite(spritesheet, frameCount);
   }
 
+  get height(): number {
+    return this.sprite.h;
+  }
+
   render(ctx: CanvasRenderingContext2D, x: number, y: number): void {
     this.sprite.x = x;
     this.sprite.y = y;
@@ -107,4 +111,8 @@ export class SineFlight {
 
 export class Scaled {
   constructor(public scale: number) { }
+}
+
+export class XpDonor {
+  constructor(public xp: number) { }
 }

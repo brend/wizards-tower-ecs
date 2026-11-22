@@ -12,6 +12,7 @@ import {
   SineFlight,
   RangedAttack,
   Scaled,
+  XpDonor,
 } from "./components";
 
 const width = 320;
@@ -43,6 +44,7 @@ export function spawnOrk(world: World): Entity {
     new Enemy(1, 3),
     new Movement(16),
     new Destination(width - 64, 126),
+    new XpDonor(1),
   );
 }
 
@@ -56,6 +58,7 @@ export function spawnHulk(world: World): Entity {
     new Enemy(1, 3),
     new Movement(16),
     new Destination(width - 64, 126),
+    new XpDonor(3),
   );
 }
 
@@ -70,6 +73,7 @@ export function spawnGargoyle(world: World): Entity {
     new Destination(width - 96, 60),
     new SineFlight(4, 32, 0),
     new RangedAttack(),
+    new XpDonor(2),
   );
 }
 

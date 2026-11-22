@@ -19,6 +19,7 @@ import {
   SineFlight,
   RangedAttack,
   Scaled,
+  XpDonor,
 } from "./components";
 import {
   projectileSpeed,
@@ -51,7 +52,8 @@ export class GameScene implements Scene {
   private xp = 0;
 
   private readonly enemySpawnChances = new Map<EnemySpawner, number>([
-    [spawnHulk, 0.5],
+    [spawnGargoyle, 0.15],
+    [spawnHulk, 0.05],
   ]);
 
   constructor(
@@ -86,9 +88,16 @@ export class GameScene implements Scene {
     });
 
     for (const e of deadEnemies) {
-      this.world.destroy(e);
-      this.xp += 1;
+      this.killEnemy(e);
     }
+  }
+
+  private killEnemy(e: Entity): void {
+    const xpDonation = this.world.get(e, XpDonor);
+    if (xpDonation) {
+      this.xp += xpDonation.xp;
+    }
+    this.world.destroy(e);
   }
 
   private spawnEnemies(dt: number): void {
@@ -332,12 +341,9 @@ export class GameScene implements Scene {
   }
 
   render(ctx: RenderingContext): void {
-    this.world.each(
-      [Sprite, Position],
-      (e, s, p) => {
-        this.renderCreature(ctx, e, s, p);
-      },
-    );
+    this.world.each([Sprite, Position], (e, s, p) => {
+      this.renderCreature(ctx, e, s, p);
+    });
     this.renderGround(ctx);
     this.world.each([Position, Health], (_, p, h) => {
       ctx.strokeStyle = "red";
@@ -352,22 +358,20 @@ export class GameScene implements Scene {
     ctx: RenderingContext,
     e: Entity,
     sprite: Sprite,
-    position: { x: number; y: number; },
+    position: Readonly<Position>,
   ): void {
     const jitter = this.world.get(e, Jitter);
-    if (jitter) {
-      position.x += jitter.x;
-      position.y += jitter.y;
-    }
+    const x = position.x + (jitter?.x ?? 0);
+    const y = position.y + (jitter?.y ?? 0);
     const scale = this.world.get(e, Scaled)?.scale;
     if (scale) {
       ctx.save();
-      ctx.translate(position.x, position.y - 8);
+      ctx.translate(x, y - 8);
       ctx.scale(scale, scale);
       sprite.render(ctx, 0, 0);
       ctx.restore();
     } else {
-      sprite.render(ctx, position.x, position.y);
+      sprite.render(ctx, x, y);
     }
   }
 
