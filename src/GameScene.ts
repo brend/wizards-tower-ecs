@@ -33,9 +33,10 @@ import {
   spawnHulk,
 } from "./entities";
 import { clamp, randomInRange, predictEnemyPosition } from "./math";
-import { X509Certificate } from "crypto";
+import { Upgrade } from "./levelup";
 
 type RenderingContext = CanvasRenderingContext2D;
+type GameState = "playing" | "levelup";
 
 export class GameScene implements Scene {
   private readonly world = new World();
@@ -47,10 +48,13 @@ export class GameScene implements Scene {
   private readonly grassSprite = new OrbSprite("assets/Ground-1.png");
   private readonly groundSprite = new OrbSprite("assets/Ground-2.png");
 
+  private state: GameState = "playing";
   private fireballTimer = 0;
+  private fireballInterval = 0.5;
   private enemyTimer = 0;
   private xp = 0;
   private nextLevelXp = 5;
+  private upgradeChoices: Upgrade[] | null = null;
 
   private readonly enemySpawnChances = new Map<EnemySpawner, number>([
     [spawnGargoyle, 0.15],
@@ -68,15 +72,42 @@ export class GameScene implements Scene {
   }
 
   update(dt: number): void {
-    this.executeDeferredActions();
+    switch (this.state) {
+      case "levelup":
+        this.updateLevelupScreen(dt);
+        break;
+      case "playing":
+        this.updateGameplay(dt);
+        break;
+    }
+  }
 
+  private updateLevelupScreen(dt: number): void {}
+
+  private updateGameplay(dt: number): void {
+    this.executeDeferredActions();
     this.removeDeadEnemies();
+
+    if (this.xp >= this.nextLevelXp) {
+      this.upgradeChoices = this.rollUpgrades();
+      this.state = "levelup";
+      return;
+    }
+
     this.spawnEnemies(dt);
     this.spawnFireballs(dt);
     this.updateAnimations(dt);
     this.resolveEnemyAttacks(dt);
     this.moveEnemies(dt);
     this.updateProjectiles(dt);
+  }
+
+  private rollUpgrades(): Upgrade[] {
+    return [
+      { name: "Life", sprite: new OrbSprite("assets/Upgrade-Tower.png") },
+      { name: "Speed", sprite: new OrbSprite("assets/Upgrade-Fireball.png") },
+      { name: "Piercing", sprite: new OrbSprite("assets/Upgrade-Fireball.png") },
+    ];
   }
 
   private removeDeadEnemies(): void {
@@ -113,7 +144,7 @@ export class GameScene implements Scene {
 
   private spawnFireballs(dt: number): void {
     this.fireballTimer += dt;
-    if (this.fireballTimer >= 2) {
+    if (this.fireballTimer >= this.fireballInterval) {
       let sourcePosition: Position | undefined;
 
       this.world.each([Position, FireballHurler], (_, p, _f) => {
@@ -393,5 +424,21 @@ export class GameScene implements Scene {
     ctx.fillStyle = "white";
     ctx.font = "6px monospace";
     ctx.fillText(`XP: ${this.xp}`, 290, 20);
+
+    if (this.state === "levelup") {
+      ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+      ctx.fillRect(0, 0, this.width, this.height);
+      const upgrades = this.upgradeChoices!;
+      ctx.fillStyle = "white";
+      for (let i = 0; i < upgrades.length; ++i) {
+        const x = ((i + 0.5) * this.width) / upgrades.length;
+        const y = this.height / 2;
+        const upgrade = upgrades[i];
+        ctx.fillText(upgrade.name, x, y);
+        upgrade.sprite.x = x;
+        upgrade.sprite.y = y;
+        upgrade.sprite.render(ctx);
+      }
+    }
   }
 }
