@@ -14,6 +14,7 @@ import {
 } from "./components";
 
 const width = 320;
+export const projectileSpeed = 120;
 
 export function spawnWizard(world: World): Entity {
   return world.create(
@@ -75,6 +76,6 @@ export function spawnProjectile(
     new Destination(tx, ty),
     new Animated(),
     new Projectile(damage, target),
-    new Movement(120),
+    new Movement(projectileSpeed),
   );
 }

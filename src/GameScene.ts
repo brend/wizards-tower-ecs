@@ -20,6 +20,7 @@ import {
   RangedAttack,
 } from "./components";
 import {
+  projectileSpeed,
   spawnProjectile,
   spawnGargoyle,
   spawnOrk,
@@ -27,6 +28,23 @@ import {
   spawnWizard,
 } from "./entities";
 import { clamp, randomInRange } from "./math";
+
+function predictEnemyPosition(
+  position: Position,
+  destination: Destination,
+  speed: number,
+  flight: SineFlight | undefined,
+  time: number,
+): Position {
+  const x = Math.min(position.x + speed * time, destination.x);
+  if (!flight) return { x, y: position.y };
+
+  const traveled = x - flight.startX;
+  const phase = (traveled / flight.wavelength) * 2 * Math.PI;
+  const remaining = destination.x - x;
+  const fade = Math.min(1, remaining / (flight.wavelength / 2));
+  return { x, y: destination.y + Math.sin(phase) * flight.amplitude * fade };
+}
 
 export class GameScene implements Scene {
   private readonly world = new World();
@@ -95,20 +113,63 @@ export class GameScene implements Scene {
         sourcePosition = p;
       });
 
-      let targetPosition: Position | undefined;
-      this.world.each([Enemy, Position], (_, _e, p) => {
-        targetPosition ??= p;
+      let target: { entity: Entity; position: Position } | undefined;
+      this.world.each([Enemy, Position], (entity, _, position) => {
+        target ??= { entity, position };
         // TODO: Exit after target has been found
       });
 
-      if (sourcePosition && targetPosition) {
-        const { x, y } = sourcePosition;
-        const { x: tx, y: ty } = targetPosition;
-        this.defer(() => spawnProjectile(this.world, x, y, tx + 32, ty));
+      if (sourcePosition && target) {
+        const aim = this.getFireballAim(sourcePosition, target.entity, target.position);
+        spawnProjectile(
+          this.world,
+          sourcePosition.x,
+          sourcePosition.y,
+          aim.x,
+          aim.y,
+        );
       }
 
       this.fireballTimer = 0;
     }
+  }
+
+  private getFireballAim(
+    source: Position,
+    target: Entity,
+    position: Position,
+  ): Position {
+    const destination = this.world.get(target, Destination);
+    const movement = this.world.get(target, Movement);
+    if (
+      !destination || !movement || movement.speed <= 0 || position.x >= destination.x
+    ) {
+      return position;
+    }
+
+    const { speed } = movement;
+    const flight = this.world.get(target, SineFlight);
+    const timeToStop = (destination.x - position.x) / speed;
+    const stop = { x: destination.x, y: flight ? destination.y : position.y };
+    if (Math.hypot(stop.x - source.x, stop.y - source.y) >= projectileSpeed * timeToStop) {
+      return stop;
+    }
+
+    // Find when the fireball's travel distance matches the distance to the enemy.
+    let tooSoon = 0;
+    let reachable = timeToStop;
+    let aim = stop;
+    while ((reachable - tooSoon) * projectileSpeed > 0.1) {
+      const time = (tooSoon + reachable) / 2;
+      const predicted = predictEnemyPosition(position, destination, speed, flight, time);
+      if (Math.hypot(predicted.x - source.x, predicted.y - source.y) > projectileSpeed * time) {
+        tooSoon = time;
+      } else {
+        reachable = time;
+        aim = predicted;
+      }
+    }
+    return aim;
   }
 
   private updateAnimations(dt: number): void {
@@ -126,18 +187,16 @@ export class GameScene implements Scene {
     this.world.each(
       [Position, Destination, Movement, Enemy],
       (e, position, destination, movement, enemy) => {
-        position.x = Math.min(position.x + movement.speed * dt, destination.x);
-
         const flight = this.world.get(e, SineFlight);
-        if (flight) {
-          const traveled = position.x - flight.startX;
-          const phase = (traveled / flight.wavelength) * 2 * Math.PI;
-          const remaining = destination.x - position.x;
-          const fade = Math.min(1, remaining / (flight.wavelength / 2));
-
-          position.y =
-            destination.y + Math.sin(phase) * flight.amplitude * fade;
-        }
+        const next = predictEnemyPosition(
+          position,
+          destination,
+          movement.speed,
+          flight,
+          dt,
+        );
+        position.x = next.x;
+        position.y = next.y;
 
         if (position.x >= destination.x) {
           position.x = destination.x;
