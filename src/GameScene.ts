@@ -55,6 +55,7 @@ export class GameScene implements Scene {
   private xp = 0;
   private nextLevelXp = 5;
   private upgradeChoices: Upgrade[] | null = null;
+  private readonly upgradeLevels = new Map<Upgrade["name"], number>();
 
   private readonly enemySpawnChances = new Map<EnemySpawner, number>([
     [spawnGargoyle, 0.15],
@@ -83,6 +84,43 @@ export class GameScene implements Scene {
   }
 
   private updateLevelupScreen(dt: number): void {}
+
+  onPointerDown(x: number, y: number): void {
+    const choices = this.upgradeChoices;
+    if (this.state !== "levelup" || choices === null) return;
+
+    const choice = choices.find((_, index) => {
+      const bounds = this.getUpgradeBounds(index, choices.length);
+      return (
+        x >= bounds.x &&
+        x < bounds.x + bounds.width &&
+        y >= bounds.y &&
+        y < bounds.y + bounds.height
+      );
+    });
+    if (!choice) return;
+
+    this.upgradeLevels.set(choice.name, this.getUpgradeLevel(choice.name) + 1);
+    this.xp -= this.nextLevelXp;
+    this.upgradeChoices = null;
+    this.state = "playing";
+  }
+
+  getUpgradeLevel(name: Upgrade["name"]): number {
+    return this.upgradeLevels.get(name) ?? 0;
+  }
+
+  private getUpgradeBounds(index: number, count: number) {
+    const columnWidth = this.width / count;
+    const width = Math.min(64, columnWidth - 8);
+    const height = 44;
+    return {
+      x: (index + 0.5) * columnWidth - width / 2,
+      y: (this.height - height) / 2,
+      width,
+      height,
+    };
+  }
 
   private updateGameplay(dt: number): void {
     this.executeDeferredActions();
@@ -425,20 +463,29 @@ export class GameScene implements Scene {
     ctx.font = "6px monospace";
     ctx.fillText(`XP: ${this.xp}`, 290, 20);
 
-    if (this.state === "levelup") {
+    const upgrades = this.upgradeChoices;
+    if (this.state === "levelup" && upgrades !== null) {
+      ctx.save();
       ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
       ctx.fillRect(0, 0, this.width, this.height);
-      const upgrades = this.upgradeChoices!;
-      ctx.fillStyle = "white";
-      for (let i = 0; i < upgrades.length; ++i) {
-        const x = ((i + 0.5) * this.width) / upgrades.length;
-        const y = this.height / 2;
-        const upgrade = upgrades[i];
-        ctx.fillText(upgrade.name, x, y);
-        upgrade.sprite.x = x;
-        upgrade.sprite.y = y;
+      ctx.textAlign = "center";
+      ctx.strokeStyle = "white";
+      upgrades.forEach((upgrade, index) => {
+        const { x, y, width, height } = this.getUpgradeBounds(
+          index,
+          upgrades.length,
+        );
+        const centerX = x + width / 2;
+        ctx.fillStyle = "#172036";
+        ctx.fillRect(x, y, width, height);
+        ctx.strokeRect(x, y, width, height);
+        ctx.fillStyle = "white";
+        ctx.fillText(upgrade.name, centerX, y + height - 6);
+        upgrade.sprite.x = centerX - upgrade.sprite.width / 2;
+        upgrade.sprite.y = y + 4;
         upgrade.sprite.render(ctx);
-      }
+      });
+      ctx.restore();
     }
   }
 }
