@@ -1,9 +1,12 @@
 import { type Scene, World, Sprite as OrbSprite, Entity } from "@waldrumpus/orb";
-import { Sprite, Position, Animated, Enemy, FireballHurler, Destination, Health, Projectile, Movement, Attack } from "./components";
+import { Sprite, Position, Animated, Enemy, FireballHurler, Destination, Health, Projectile, Movement, Attack, Jitter } from "./components";
 import { spawnFireball, spawnOrk, spawnTower, spawnWizard } from "./entities";
+import { clamp, randomInRange } from "./math";
 
 export class GameScene implements Scene {
   private readonly world = new World();
+
+  private readonly tower: Entity;
 
   private deferredActions: Array<() => void> = [];
 
@@ -18,7 +21,7 @@ export class GameScene implements Scene {
     private readonly height: number,
   ) {
     spawnWizard(this.world);
-    spawnTower(this.world);
+    this.tower = spawnTower(this.world);
 
     spawnOrk(this.world);
   }
@@ -117,28 +120,45 @@ export class GameScene implements Scene {
     this.world.each([Sprite, Animated], (_, s, a) => {
       s.update(dt);
     });
+
+    this.world.each([Jitter], (_, j) => {
+      j.x = clamp(j.x + randomInRange(-1, 1), -3, 3);
+      j.y = clamp(j.y + randomInRange(-1, 1), -3, 3);
+    });
   }
 
   private moveEnemies(dt: number): void {
-    this.world.each([Position, Destination, Movement, Enemy], (enemy, p, t, m) => {
-      p.x += m.speed * dt;
-      if (p.x >= t.x) {
-        p.x = t.x;
-        this.defer(() => this.world.remove(enemy, t));
+    this.world.each([Position, Destination, Movement, Enemy], (e, position, destination, movement, enemy) => {
+      position.x += movement.speed * dt;
+      if (position.x >= destination.x) {
+        position.x = destination.x;
+        this.defer(() => {
+          this.world.remove(e, destination);
+          this.world.add(e, new Attack(enemy.attackStrength, enemy.attackInterval));
+          this.world.add(e, new Jitter());
+        });
       }
     });
   }
 
   private resolveEnemyAttacks(dt: number): void {
-    const readyAttacks = [];
+    const readyAttacks: Attack[] = [];
 
     this.world.each([Enemy, Attack], (_, _e, a) => {
       a.cooldown(dt);
       if (a.isReady) {
-        // TODO: Perform the attack
-        a.reset();
+        readyAttacks.push(a);
       }
     });
+
+    if (readyAttacks.length === 0) return;
+
+    const towerHealth = this.world.get(this.tower, Health)!;
+
+    for (const a of readyAttacks) {
+      towerHealth.reduce(a.damage);
+      a.reset();
+    }
   }
 
   private moveProjectiles(dt: number): void {
@@ -174,6 +194,9 @@ export class GameScene implements Scene {
   render(ctx: CanvasRenderingContext2D): void {
     this.world.each([Sprite, Position], (_, s, p) => {
       s.render(ctx, p.x, p.y);
+    }, { without: [Jitter] });
+    this.world.each([Sprite, Position, Jitter], (_, s, p, j) => {
+      s.render(ctx, p.x + j.x, p.y + j.y);
     });
     this.renderGround(ctx);
     this.world.each([Position, Health], (_, p, h) => {

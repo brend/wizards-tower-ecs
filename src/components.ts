@@ -42,7 +42,9 @@ export class Health {
 
 export class Animated { }
 
-export class Enemy { }
+export class Enemy {
+  constructor(public attackStrength: number, public attackInterval: number) { }
+}
 
 export class Projectile {
   constructor(public damage: number) { }
@@ -52,7 +54,7 @@ export class FireballHurler { }
 
 export class Attack {
   public cooldownTimer = 0;
-  constructor(public damage: number, public range: number, public interval: number) { }
+  constructor(public damage: number, public interval: number) { }
   cooldown(dt: number): void {
     this.cooldownTimer += dt;
   }
@@ -66,4 +68,8 @@ export class Attack {
 
 export class Movement {
   constructor(public speed: number) { }
+}
+
+export class Jitter {
+  constructor(public x = 0, public y = 0) { }
 }

@@ -16,6 +16,7 @@ export function spawnTower(world: World): Entity {
   return world.create(
     new Sprite("assets/Tower.png"),
     new Position(width - 64, 32),
+    new Health(10),
   );
 }
 
@@ -24,9 +25,8 @@ export function spawnOrk(world: World): Entity {
     new Sprite("assets/Ork.png", 2),
     new Position(0, 126),
     new Health(2),
-    new Attack(1, 1, 2),
     new Animated(),
-    new Enemy(),
+    new Enemy(1, 3),
     new Movement(16),
     new Destination(width - 64, 126),
   );
