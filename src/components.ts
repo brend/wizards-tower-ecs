@@ -104,3 +104,7 @@ export class SineFlight {
     public startX: number,
   ) {}
 }
+
+export class Scaled {
+  constructor(public scale: number) { }
+}

@@ -18,6 +18,7 @@ import {
   Jitter,
   SineFlight,
   RangedAttack,
+  Scaled,
 } from "./components";
 import {
   projectileSpeed,
@@ -28,8 +29,10 @@ import {
   spawnWizard,
   EnemySpawner,
   chooseEnemySpawningFunction,
+  spawnHulk,
 } from "./entities";
 import { clamp, randomInRange, predictEnemyPosition } from "./math";
+import { X509Certificate } from "crypto";
 
 type RenderingContext = CanvasRenderingContext2D;
 
@@ -48,7 +51,7 @@ export class GameScene implements Scene {
   private xp = 0;
 
   private readonly enemySpawnChances = new Map<EnemySpawner, number>([
-    [spawnGargoyle, 0.2],
+    [spawnHulk, 0.5],
   ]);
 
   constructor(
@@ -331,14 +334,10 @@ export class GameScene implements Scene {
   render(ctx: RenderingContext): void {
     this.world.each(
       [Sprite, Position],
-      (_, s, p) => {
-        s.render(ctx, p.x, p.y);
+      (e, s, p) => {
+        this.renderCreature(ctx, e, s, p);
       },
-      { without: [Jitter] },
     );
-    this.world.each([Sprite, Position, Jitter], (_, s, p, j) => {
-      s.render(ctx, p.x + j.x, p.y + j.y);
-    });
     this.renderGround(ctx);
     this.world.each([Position, Health], (_, p, h) => {
       ctx.strokeStyle = "red";
@@ -347,6 +346,29 @@ export class GameScene implements Scene {
       ctx.fillRect(p.x, p.y + 16, 16 * h.percentage, 4);
     });
     this.renderHud(ctx);
+  }
+
+  private renderCreature(
+    ctx: RenderingContext,
+    e: Entity,
+    sprite: Sprite,
+    position: { x: number; y: number; },
+  ): void {
+    const jitter = this.world.get(e, Jitter);
+    if (jitter) {
+      position.x += jitter.x;
+      position.y += jitter.y;
+    }
+    const scale = this.world.get(e, Scaled)?.scale;
+    if (scale) {
+      ctx.save();
+      ctx.translate(position.x, position.y - 8);
+      ctx.scale(scale, scale);
+      sprite.render(ctx, 0, 0);
+      ctx.restore();
+    } else {
+      sprite.render(ctx, position.x, position.y);
+    }
   }
 
   private renderGround(ctx: RenderingContext): void {

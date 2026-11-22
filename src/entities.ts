@@ -11,6 +11,7 @@ import {
   Movement,
   SineFlight,
   RangedAttack,
+  Scaled,
 } from "./components";
 
 const width = 320;
@@ -39,6 +40,19 @@ export function spawnOrk(world: World): Entity {
     new Position(0, 126),
     new Health(2),
     new Animated(),
+    new Enemy(1, 3),
+    new Movement(16),
+    new Destination(width - 64, 126),
+  );
+}
+
+export function spawnHulk(world: World): Entity {
+  return world.create(
+    new Sprite("assets/Ork.png", 2),
+    new Position(0, 126),
+    new Health(5),
+    new Animated(),
+    new Scaled(1.5),
     new Enemy(1, 3),
     new Movement(16),
     new Destination(width - 64, 126),
