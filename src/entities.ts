@@ -55,6 +55,7 @@ export function spawnHulk(world: World): Entity {
     new Health(5),
     new Animated(),
     new Scaled(1.5),
+    new SineFlight(1, 8, 0),
     new Enemy(1, 3),
     new Movement(16),
     new Destination(width - 64, 126),

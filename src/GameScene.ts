@@ -50,6 +50,7 @@ export class GameScene implements Scene {
   private fireballTimer = 0;
   private enemyTimer = 0;
   private xp = 0;
+  private nextLevelXp = 5;
 
   private readonly enemySpawnChances = new Map<EnemySpawner, number>([
     [spawnGargoyle, 0.15],
