@@ -26,25 +26,12 @@ import {
   spawnOrk,
   spawnTower,
   spawnWizard,
+  EnemySpawner,
+  chooseEnemySpawningFunction,
 } from "./entities";
-import { clamp, randomInRange } from "./math";
+import { clamp, randomInRange, predictEnemyPosition } from "./math";
 
-function predictEnemyPosition(
-  position: Position,
-  destination: Destination,
-  speed: number,
-  flight: SineFlight | undefined,
-  time: number,
-): Position {
-  const x = Math.min(position.x + speed * time, destination.x);
-  if (!flight) return { x, y: position.y };
-
-  const traveled = x - flight.startX;
-  const phase = (traveled / flight.wavelength) * 2 * Math.PI;
-  const remaining = destination.x - x;
-  const fade = Math.min(1, remaining / (flight.wavelength / 2));
-  return { x, y: destination.y + Math.sin(phase) * flight.amplitude * fade };
-}
+type RenderingContext = CanvasRenderingContext2D;
 
 export class GameScene implements Scene {
   private readonly world = new World();
@@ -58,6 +45,11 @@ export class GameScene implements Scene {
 
   private fireballTimer = 0;
   private enemyTimer = 0;
+  private xp = 0;
+
+  private readonly enemySpawnChances = new Map<EnemySpawner, number>([
+    [spawnGargoyle, 0.2],
+  ]);
 
   constructor(
     private readonly width: number,
@@ -92,14 +84,16 @@ export class GameScene implements Scene {
 
     for (const e of deadEnemies) {
       this.world.destroy(e);
+      this.xp += 1;
     }
   }
 
   private spawnEnemies(dt: number): void {
     this.enemyTimer += dt;
     if (this.enemyTimer >= 3) {
-      //spawnOrk(this.world);
-      spawnGargoyle(this.world);
+      const chance = Math.random();
+      const spawn = chooseEnemySpawningFunction(chance, this.enemySpawnChances);
+      spawn(this.world);
       this.enemyTimer = 0;
     }
   }
@@ -120,7 +114,11 @@ export class GameScene implements Scene {
       });
 
       if (sourcePosition && target) {
-        const aim = this.getFireballAim(sourcePosition, target.entity, target.position);
+        const aim = this.getFireballAim(
+          sourcePosition,
+          target.entity,
+          target.position,
+        );
         spawnProjectile(
           this.world,
           sourcePosition.x,
@@ -142,7 +140,10 @@ export class GameScene implements Scene {
     const destination = this.world.get(target, Destination);
     const movement = this.world.get(target, Movement);
     if (
-      !destination || !movement || movement.speed <= 0 || position.x >= destination.x
+      !destination ||
+      !movement ||
+      movement.speed <= 0 ||
+      position.x >= destination.x
     ) {
       return position;
     }
@@ -151,7 +152,10 @@ export class GameScene implements Scene {
     const flight = this.world.get(target, SineFlight);
     const timeToStop = (destination.x - position.x) / speed;
     const stop = { x: destination.x, y: flight ? destination.y : position.y };
-    if (Math.hypot(stop.x - source.x, stop.y - source.y) >= projectileSpeed * timeToStop) {
+    if (
+      Math.hypot(stop.x - source.x, stop.y - source.y) >=
+      projectileSpeed * timeToStop
+    ) {
       return stop;
     }
 
@@ -161,8 +165,17 @@ export class GameScene implements Scene {
     let aim = stop;
     while ((reachable - tooSoon) * projectileSpeed > 0.1) {
       const time = (tooSoon + reachable) / 2;
-      const predicted = predictEnemyPosition(position, destination, speed, flight, time);
-      if (Math.hypot(predicted.x - source.x, predicted.y - source.y) > projectileSpeed * time) {
+      const predicted = predictEnemyPosition(
+        position,
+        destination,
+        speed,
+        flight,
+        time,
+      );
+      if (
+        Math.hypot(predicted.x - source.x, predicted.y - source.y) >
+        projectileSpeed * time
+      ) {
         tooSoon = time;
       } else {
         reachable = time;
@@ -258,9 +271,12 @@ export class GameScene implements Scene {
 
   private updateProjectiles(dt: number): void {
     const enemies: Array<{ position: Position; health: Health }> = [];
-    this.world.each([Enemy, Position, Health], (_, _enemy, position, health) => {
-      enemies.push({ position, health });
-    });
+    this.world.each(
+      [Enemy, Position, Health],
+      (_, _enemy, position, health) => {
+        enemies.push({ position, health });
+      },
+    );
 
     this.world.each(
       [Position, Destination, Movement, Projectile],
@@ -312,7 +328,7 @@ export class GameScene implements Scene {
     this.deferredActions.length = 0;
   }
 
-  render(ctx: CanvasRenderingContext2D): void {
+  render(ctx: RenderingContext): void {
     this.world.each(
       [Sprite, Position],
       (_, s, p) => {
@@ -330,9 +346,10 @@ export class GameScene implements Scene {
       ctx.strokeRect(p.x, p.y + 16, 16, 4);
       ctx.fillRect(p.x, p.y + 16, 16 * h.percentage, 4);
     });
+    this.renderHud(ctx);
   }
 
-  private renderGround(ctx: CanvasRenderingContext2D): void {
+  private renderGround(ctx: RenderingContext): void {
     let sprite = this.grassSprite;
 
     for (let y = 140; y < this.height; y += 16) {
@@ -343,5 +360,11 @@ export class GameScene implements Scene {
       }
       sprite = this.groundSprite;
     }
+  }
+
+  private renderHud(ctx: RenderingContext): void {
+    ctx.fillStyle = "white";
+    ctx.font = "6px monospace";
+    ctx.fillText(`XP: ${this.xp}`, 290, 20);
   }
 }

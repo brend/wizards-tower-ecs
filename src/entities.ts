@@ -79,3 +79,22 @@ export function spawnProjectile(
     new Movement(projectileSpeed),
   );
 }
+
+export type EnemySpawner = (world: World) => Entity;
+
+export function chooseEnemySpawningFunction(
+  randomNumber: number,
+  chances: Map<EnemySpawner, number>,
+): (world: World) => Entity {
+  if (randomNumber < 0 || randomNumber >= 1)
+    throw new Error("random number must range within [0;1)");
+
+  let cumulativeChance = 0;
+
+  for (const [spawn, chance] of chances) {
+    cumulativeChance += chance;
+    if (randomNumber < cumulativeChance) return spawn;
+  }
+
+  return spawnOrk;
+}
