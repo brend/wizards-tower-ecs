@@ -1,5 +1,15 @@
 import { Entity, World } from "@waldrumpus/orb";
-import { Animated, Attack, Enemy, FireballHurler, Health, Position, Projectile, Sprite, Destination, Movement } from "./components";
+import {
+  Animated,
+  Enemy,
+  FireballHurler,
+  Health,
+  Position,
+  Projectile,
+  Sprite,
+  Destination,
+  Movement,
+} from "./components";
 
 const width = 320;
 

@@ -19,15 +19,24 @@ export class Sprite {
 }
 
 export class Position {
-  constructor(public x = 0, public y = 0) { }
+  constructor(
+    public x = 0,
+    public y = 0,
+  ) {}
 }
 
 export class Destination {
-  constructor(public x = 0, public y = 0) { }
+  constructor(
+    public x = 0,
+    public y = 0,
+  ) {}
 }
 
 export class Health {
-  constructor(public hp: number, public maxHp = hp) { }
+  constructor(
+    public hp: number,
+    public maxHp = hp,
+  ) {}
   get percentage(): number {
     return this.hp / this.maxHp;
   }
@@ -40,21 +49,27 @@ export class Health {
   }
 }
 
-export class Animated { }
+export class Animated {}
 
 export class Enemy {
-  constructor(public attackStrength: number, public attackInterval: number) { }
+  constructor(
+    public attackStrength: number,
+    public attackInterval: number,
+  ) {}
 }
 
 export class Projectile {
-  constructor(public damage: number) { }
+  constructor(public damage: number) {}
 }
 
-export class FireballHurler { }
+export class FireballHurler {}
 
 export class Attack {
   public cooldownTimer = 0;
-  constructor(public damage: number, public interval: number) { }
+  constructor(
+    public damage: number,
+    public interval: number,
+  ) {}
   cooldown(dt: number): void {
     this.cooldownTimer += dt;
   }
@@ -67,9 +82,12 @@ export class Attack {
 }
 
 export class Movement {
-  constructor(public speed: number) { }
+  constructor(public speed: number) {}
 }
 
 export class Jitter {
-  constructor(public x = 0, public y = 0) { }
+  constructor(
+    public x = 0,
+    public y = 0,
+  ) {}
 }
