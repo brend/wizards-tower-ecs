@@ -60,8 +60,7 @@ export class GameScene implements Scene {
     this.updateAnimations(dt);
     this.resolveEnemyAttacks(dt);
     this.moveEnemies(dt);
-    this.moveProjectiles(dt);
-    this.handleCollisions();
+    this.updateProjectiles(dt);
   }
 
   private removeDeadEnemies(): void {
@@ -75,72 +74,6 @@ export class GameScene implements Scene {
 
     for (const e of deadEnemies) {
       this.world.destroy(e);
-    }
-  }
-
-  private handleCollisions(): void {
-    const enemies: Array<{
-      entity: Entity;
-      position: Position;
-      health: Health;
-    }> = [];
-    const projectiles: Array<{
-      entity: Entity;
-      position: Position;
-      damage: number;
-      remainingHits: number;
-      target: Entity | undefined;
-    }> = [];
-
-    this.world.each([Enemy, Position, Health], (e, _, p, h) => {
-      enemies.push({ entity: e, position: p, health: h });
-    });
-
-    this.world.each([Projectile, Position], (e, f, p) => {
-      if (f.target !== undefined) return;
-      projectiles.push({
-        entity: e,
-        position: p,
-        damage: f.damage,
-        remainingHits: 1,
-        target: f.target,
-      });
-    });
-
-    for (const p of projectiles) {
-      if (p.target) {
-        const targetPosition = this.world.get(p.target, Position);
-        const targetHealth = this.world.get(p.target, Health);
-        if (targetPosition && targetHealth) {
-          const dx = targetPosition.x - p.position.x;
-          const dy = targetPosition.y - p.position.y;
-          const d = Math.sqrt(dx * dx + dy * dy);
-          if (d < 2) {
-            targetHealth.reduce(p.damage);
-            p.remainingHits -= 1;
-            if (p.remainingHits <= 0) {
-              this.defer(() => this.world.destroy(p.entity));
-              continue;
-            }
-          }
-          continue;
-        }
-      }
-
-      for (const e of enemies) {
-        if (e.health.hp <= 0) continue;
-        const dx = e.position.x - p.position.x;
-        const dy = e.position.y - p.position.y;
-        const d = Math.sqrt(dx * dx + dy * dy);
-        if (d < 4) {
-          e.health.reduce(p.damage);
-          p.remainingHits -= 1;
-          if (p.remainingHits <= 0) {
-            this.defer(() => this.world.destroy(p.entity));
-            break;
-          }
-        }
-      }
     }
   }
 
@@ -264,29 +197,47 @@ export class GameScene implements Scene {
     }
   }
 
-  private moveProjectiles(dt: number): void {
+  private updateProjectiles(dt: number): void {
+    const enemies: Array<{ position: Position; health: Health }> = [];
+    this.world.each([Enemy, Position, Health], (_, _enemy, position, health) => {
+      enemies.push({ position, health });
+    });
+
     this.world.each(
       [Position, Destination, Movement, Projectile],
-      (e, p, t, m, projectile) => {
-        const dx = t.x - p.x;
-        const dy = t.y - p.y;
+      (entity, position, destination, movement, projectile) => {
+        const dx = destination.x - position.x;
+        const dy = destination.y - position.y;
         const distance = Math.hypot(dx, dy);
-        const step = m.speed * dt;
-        if (step >= distance) {
-          p.x = t.x;
-          p.y = t.y;
-          if (projectile.target !== undefined) {
-            this.world
-              .get(projectile.target, Health)
-              ?.reduce(projectile.damage);
-          }
-          this.defer(() => this.world.destroy(e));
-          return;
+        const step = movement.speed * dt;
+        const arrived = step >= distance;
+        if (arrived) {
+          position.x = destination.x;
+          position.y = destination.y;
+        } else {
+          const fraction = step / distance;
+          position.x += dx * fraction;
+          position.y += dy * fraction;
         }
 
-        const fraction = step / distance;
-        p.x += dx * fraction;
-        p.y += dy * fraction;
+        let hit: Health | undefined;
+        if (projectile.target === undefined) {
+          hit = enemies.find(
+            (enemy) =>
+              enemy.health.hp > 0 &&
+              Math.hypot(
+                enemy.position.x - position.x,
+                enemy.position.y - position.y,
+              ) < 4,
+          )?.health;
+        } else if (arrived) {
+          hit = this.world.get(projectile.target, Health);
+        }
+
+        hit?.reduce(projectile.damage);
+        if (hit || arrived) {
+          this.defer(() => this.world.destroy(entity));
+        }
       },
     );
   }
