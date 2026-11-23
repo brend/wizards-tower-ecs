@@ -32,6 +32,7 @@ import {
 } from "./entities";
 import { clamp, randomInRange, predictEnemyPosition } from "./math";
 import { Upgrade } from "./levelup";
+import { loadVoices } from "./sound";
 
 type RenderingContext = CanvasRenderingContext2D;
 type GameState = "playing" | "levelup";
@@ -45,6 +46,8 @@ export class GameScene implements Scene {
 
   private readonly grassSprite = new OrbSprite("assets/Ground-1.png");
   private readonly groundSprite = new OrbSprite("assets/Ground-2.png");
+
+  private readonly voicePlayer = loadVoices();
 
   private state: GameState = "playing";
   private fireballTimer = 0;
@@ -67,6 +70,12 @@ export class GameScene implements Scene {
     this.tower = spawnTower(this.world);
 
     spawnOrk(this.world);
+  }
+
+  async enableSound(): Promise<boolean> {
+    const enabled = await this.voicePlayer.enable();
+    if (enabled) this.playVoice("welcome");
+    return enabled;
   }
 
   update(dt: number): void {
@@ -225,6 +234,9 @@ export class GameScene implements Scene {
           aim.x,
           aim.y,
         );
+        if (Math.random() >= 0.9) {
+          this.playVoice("fireball");
+        }
       }
 
       this.fireballTimer = 0;
@@ -507,5 +519,11 @@ export class GameScene implements Scene {
 
     ctx.fillStyle = "white";
     ctx.fillText(`fireballInterval: ${this.fireballInterval}`, 0, 160);
+  }
+
+  private playVoice(name: string): void {
+    void this.voicePlayer.play(name).catch((error) => {
+      console.error(`Could not play voice clip ${name}`, error);
+    });
   }
 }

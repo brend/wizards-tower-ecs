@@ -7,7 +7,19 @@ body {
 }
 
 #container {
+  position: relative;
   max-width: min(100%, calc(100dvh * var(--scene-aspect)));
+}
+
+#enableSound {
+  position: absolute;
+  inset: 0.75rem 0.75rem auto auto;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e4be69;
+  background: #172036;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
 }
 
 #gameViewport {
