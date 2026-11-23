@@ -51,6 +51,11 @@ export class Health {
       this.hp = 0;
     }
   }
+  increase(amount: number): void {
+    if (amount < 0) throw new Error("invalid amount");
+    this.maxHp += amount;
+    this.hp += amount;
+  }
 }
 
 export class Animated {}
@@ -110,9 +115,9 @@ export class SineFlight {
 }
 
 export class Scaled {
-  constructor(public scale: number) { }
+  constructor(public scale: number) {}
 }
 
 export class XpDonor {
-  constructor(public xp: number) { }
+  constructor(public xp: number) {}
 }

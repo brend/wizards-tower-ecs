@@ -57,7 +57,21 @@ export function spawnHulk(world: World): Entity {
     new Scaled(1.5),
     new SineFlight(1, 8, 0),
     new Enemy(1, 3),
-    new Movement(16),
+    new Movement(12),
+    new Destination(width - 64, 126),
+    new XpDonor(3),
+  );
+}
+
+export function spawnRunner(world: World): Entity {
+  return world.create(
+    new Sprite("assets/Runner.png", 2),
+    new Position(0, 126),
+    new Health(3),
+    new Animated(),
+    new SineFlight(1, 8, 0),
+    new Enemy(1, 3),
+    new Movement(28),
     new Destination(width - 64, 126),
     new XpDonor(3),
   );
@@ -87,7 +101,7 @@ export function spawnProjectile(
   target: Entity | undefined = undefined,
   damage = 1,
   spritesheet = "assets/Fireball.png",
-  frameCount = 2
+  frameCount = 2,
 ): Entity {
   return world.create(
     new Sprite(spritesheet, frameCount),
@@ -116,4 +130,12 @@ export function chooseEnemySpawningFunction(
   }
 
   return spawnOrk;
+}
+
+export function getEnemySpawnChances(): Map<EnemySpawner, number> {
+  return new Map<EnemySpawner, number>([
+    [spawnGargoyle, 0.15],
+    [spawnRunner, 0.15],
+    [spawnHulk, 0.05],
+  ]);
 }

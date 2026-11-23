@@ -24,13 +24,11 @@ import {
 import {
   projectileSpeed,
   spawnProjectile,
-  spawnGargoyle,
   spawnOrk,
   spawnTower,
   spawnWizard,
-  EnemySpawner,
   chooseEnemySpawningFunction,
-  spawnHulk,
+  getEnemySpawnChances,
 } from "./entities";
 import { clamp, randomInRange, predictEnemyPosition } from "./math";
 import { Upgrade } from "./levelup";
@@ -50,17 +48,16 @@ export class GameScene implements Scene {
 
   private state: GameState = "playing";
   private fireballTimer = 0;
-  private fireballInterval = 0.5;
+  private fireballInterval = 1.5;
+  private fireballPierce = 0;
   private enemyTimer = 0;
+  private enemyInterval = 3;
   private xp = 0;
   private nextLevelXp = 5;
   private upgradeChoices: Upgrade[] | null = null;
   private readonly upgradeLevels = new Map<Upgrade["name"], number>();
 
-  private readonly enemySpawnChances = new Map<EnemySpawner, number>([
-    [spawnGargoyle, 0.15],
-    [spawnHulk, 0.05],
-  ]);
+  private readonly enemySpawnChances = getEnemySpawnChances();
 
   constructor(
     private readonly width: number,
@@ -100,10 +97,26 @@ export class GameScene implements Scene {
     });
     if (!choice) return;
 
+    this.applyUpgrade(choice.name);
     this.upgradeLevels.set(choice.name, this.getUpgradeLevel(choice.name) + 1);
-    this.xp -= this.nextLevelXp;
+    this.nextLevelXp = this.nextLevelXp * 1.5; // TODO: Find better algorithm
     this.upgradeChoices = null;
     this.state = "playing";
+  }
+
+  private applyUpgrade(name: string): void {
+    switch (name) {
+      case "Life":
+        this.world.get(this.tower, Health)!.increase(1);
+        break;
+      case "Speed":
+        this.fireballInterval *= 0.9;
+        break;
+      case "Piercing":
+        break;
+      default:
+        throw new Error(`unknown upgrade name: "${name}"`);
+    }
   }
 
   getUpgradeLevel(name: Upgrade["name"]): number {
@@ -144,7 +157,10 @@ export class GameScene implements Scene {
     return [
       { name: "Life", sprite: new OrbSprite("assets/Upgrade-Tower.png") },
       { name: "Speed", sprite: new OrbSprite("assets/Upgrade-Fireball.png") },
-      { name: "Piercing", sprite: new OrbSprite("assets/Upgrade-Fireball.png") },
+      {
+        name: "Piercing",
+        sprite: new OrbSprite("assets/Upgrade-Fireball.png"),
+      },
     ];
   }
 
@@ -172,7 +188,7 @@ export class GameScene implements Scene {
 
   private spawnEnemies(dt: number): void {
     this.enemyTimer += dt;
-    if (this.enemyTimer >= 3) {
+    if (this.enemyTimer >= this.enemyInterval) {
       const chance = Math.random();
       const spawn = chooseEnemySpawningFunction(chance, this.enemySpawnChances);
       spawn(this.world);
@@ -191,8 +207,9 @@ export class GameScene implements Scene {
 
       let target: { entity: Entity; position: Position } | undefined;
       this.world.each([Enemy, Position], (entity, _, position) => {
-        target ??= { entity, position };
-        // TODO: Exit after target has been found
+        if (!target || position.x > target.position.x) {
+          target = { entity, position };
+        }
       });
 
       if (sourcePosition && target) {
@@ -487,5 +504,8 @@ export class GameScene implements Scene {
       });
       ctx.restore();
     }
+
+    ctx.fillStyle = "white";
+    ctx.fillText(`fireballInterval: ${this.fireballInterval}`, 0, 160);
   }
 }
