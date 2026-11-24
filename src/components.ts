@@ -61,13 +61,23 @@ export class Health {
 export class Animated {}
 
 export class Enemy {
+  target: Entity | undefined;
   constructor(
     public attackStrength: number,
     public attackInterval: number,
   ) {}
 }
 
-export class Minion {}
+export class Minion {
+  public target: Entity | undefined;
+  constructor(
+    public attackStrength: number,
+    public attackInterval: number,
+  ) {}
+  get hasTarget(): boolean {
+    return this.target !== undefined;
+  }
+}
 
 export class Projectile {
   constructor(
@@ -108,6 +118,8 @@ export class Jitter {
   ) {}
 }
 
+export class Flying {}
+
 export class SineFlight {
   constructor(
     public amplitude: number,
@@ -123,3 +135,5 @@ export class Scaled {
 export class XpDonor {
   constructor(public xp: number) {}
 }
+
+export class Halted {}

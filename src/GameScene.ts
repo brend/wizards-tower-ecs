@@ -21,6 +21,8 @@ import {
   Scaled,
   XpDonor,
   Minion,
+  Halted,
+  Flying,
 } from "./components";
 import {
   projectileSpeed,
@@ -151,6 +153,7 @@ export class GameScene implements Scene {
   private updateGameplay(dt: number): void {
     this.executeDeferredActions();
     this.removeDeadEnemies();
+    this.removeDeadMinions();
 
     if (this.xp >= this.nextLevelXp) {
       this.upgradeChoices = this.rollUpgrades();
@@ -162,9 +165,10 @@ export class GameScene implements Scene {
     this.spawnEnemies(dt);
     this.spawnFireballs(dt);
     this.updateAnimations(dt);
+    this.resolveMinionAttacks(dt);
     this.resolveEnemyAttacks(dt);
-    this.moveMinions(dt);
     this.moveEnemies(dt);
+    this.moveMinions(dt);
     this.updateProjectiles(dt);
   }
 
@@ -182,8 +186,8 @@ export class GameScene implements Scene {
   private removeDeadEnemies(): void {
     const deadEnemies: Entity[] = [];
 
-    this.world.each([Enemy, Health], (e, _, h) => {
-      if (h.hp <= 0) {
+    this.world.each([Health, Enemy], (e, health) => {
+      if (health.hp <= 0) {
         deadEnemies.push(e);
       }
     });
@@ -193,11 +197,50 @@ export class GameScene implements Scene {
     }
   }
 
+  private removeDeadMinions(): void {
+    const deadMinions: Entity[] = [];
+
+    this.world.each([Health, Minion], (m, health) => {
+      if (health.hp <= 0) {
+        deadMinions.push(m);
+      }
+    });
+
+    this.world.each([Enemy, Halted, Attack], (e, enemy, halted, attack) => {
+      if (enemy.target && deadMinions.includes(enemy.target)) {
+        enemy.target = undefined;
+        this.defer(() => {
+          this.world.remove(e, halted);
+          this.world.remove(e, attack);
+        });
+      }
+    });
+
+    for (const m of deadMinions) {
+      this.world.destroy(m);
+    }
+  }
+
   private killEnemy(e: Entity): void {
     const xpDonation = this.world.get(e, XpDonor);
     if (xpDonation) {
       this.xp += xpDonation.xp;
     }
+    this.world.each(
+      [Minion, Halted, Attack, Health],
+      (m, minion, halted, attack, health) => {
+        if (minion.target === e && health.hp > 0) {
+          minion.target = undefined;
+          this.defer(() => {
+            if (this.world.isAlive(m)) {
+              this.world.remove(m, halted);
+              this.world.remove(m, attack);
+            }
+          });
+        }
+      },
+    );
+
     this.world.destroy(e);
   }
 
@@ -236,11 +279,9 @@ export class GameScene implements Scene {
       });
 
       if (sourcePosition && target) {
-        const aim = this.getFireballAim(
-          sourcePosition,
-          target.entity,
-          target.position,
-        );
+        const aim = this.world.has(target.entity, Halted)
+          ? target.position
+          : this.getFireballAim(sourcePosition, target.entity, target.position);
         spawnProjectile(
           this.world,
           sourcePosition.x,
@@ -321,10 +362,65 @@ export class GameScene implements Scene {
     });
   }
 
+  private collectMobileGroundEnemies(): Array<{
+    e: Entity;
+    position: Position;
+    enemy: Enemy;
+  }> {
+    const groundEnemies: Array<{
+      e: Entity;
+      position: Position;
+      enemy: Enemy;
+    }> = [];
+    this.world.each(
+      [Position, Enemy],
+      (e, position, enemy) => {
+        groundEnemies.push({ e, position, enemy });
+      },
+      { without: [Halted, Flying] },
+    );
+    return groundEnemies;
+  }
+
   private moveMinions(dt: number): void {
-    this.world.each([Position, Movement, Minion], (e, position, movement) => {
-      position.x += movement.speed * dt;
-    });
+    const groundEnemies = this.collectMobileGroundEnemies();
+
+    function collide(a: Position, b: Position): boolean {
+      return Math.abs(a.x - b.x) < 6;
+    }
+
+    this.world.each(
+      [Position, Movement, Minion],
+      (m, position, movement, minion) => {
+        position.x += movement.speed * dt;
+        if (minion.hasTarget || groundEnemies.length === 0) return;
+        for (let i = 0; i < groundEnemies.length; ++i) {
+          const enemy = groundEnemies[i];
+          if (collide(enemy.position, position)) {
+            minion.target = enemy.e;
+            enemy.enemy.target = m;
+            this.defer(() => {
+              this.world.add(m, new Halted());
+              this.world.add(
+                m,
+                new Attack(minion.attackStrength, minion.attackInterval),
+              );
+              this.world.add(enemy.e, new Halted());
+              this.world.add(
+                enemy.e,
+                new Attack(
+                  enemy.enemy.attackStrength,
+                  enemy.enemy.attackInterval,
+                ),
+              );
+            });
+            groundEnemies.splice(i, 1);
+            break;
+          }
+        }
+      },
+      { without: [Halted] },
+    );
   }
 
   private moveEnemies(dt: number): void {
@@ -354,20 +450,46 @@ export class GameScene implements Scene {
           });
         }
       },
+      { without: [Halted] },
     );
+  }
+
+  private resolveMinionAttacks(dt: number): void {
+    const readyAttacks: Array<{
+      attack: Attack;
+      target: Entity;
+    }> = [];
+
+    this.world.each([Attack, Minion], (_, attack, minion) => {
+      if (!minion.hasTarget) return;
+      attack.cooldown(dt);
+      if (attack.isReady) {
+        readyAttacks.push({ attack, target: minion.target! });
+      }
+    });
+
+    if (readyAttacks.length === 0) return;
+
+    for (const a of readyAttacks) {
+      const health = this.world.get(a.target, Health);
+      health?.reduce(a.attack.damage);
+      a.attack.reset();
+    }
   }
 
   private resolveEnemyAttacks(dt: number): void {
     const readyAttacks: Array<{
+      enemy: Enemy;
       attack: Attack;
       position: Position;
       isRanged: boolean;
     }> = [];
 
-    this.world.each([Enemy, Attack, Position], (e, _, attack, position) => {
+    this.world.each([Enemy, Attack, Position], (e, enemy, attack, position) => {
       attack.cooldown(dt);
       if (attack.isReady) {
         readyAttacks.push({
+          enemy,
           attack,
           position,
           isRanged: this.world.get(e, RangedAttack) !== undefined,
@@ -377,24 +499,25 @@ export class GameScene implements Scene {
 
     if (readyAttacks.length === 0) return;
 
-    const towerHealth = this.world.get(this.tower, Health)!;
-    const towerPosition = this.world.get(this.tower, Position)!;
-
     for (const a of readyAttacks) {
+      const target = a.enemy.target ?? this.tower;
+      const targetHealth = this.world.get(target, Health)!;
+      const targetPosition = this.world.get(target, Position)!;
+
       if (a.isRanged) {
         spawnProjectile(
           this.world,
           a.position.x,
           a.position.y,
-          towerPosition.x,
-          towerPosition.y,
+          targetPosition.x,
+          targetPosition.y,
           this.tower,
           a.attack.damage,
           "assets/Trident.png",
           1,
         );
       } else {
-        towerHealth.reduce(a.attack.damage);
+        targetHealth.reduce(a.attack.damage);
       }
       a.attack.reset();
     }
@@ -464,13 +587,27 @@ export class GameScene implements Scene {
       this.renderCreature(ctx, e, s, p);
     });
     this.renderGround(ctx);
+    this.renderHealthBars(ctx);
+    this.renderAttackCooldowns(ctx);
+    this.renderHud(ctx);
+  }
+
+  private renderHealthBars(ctx: RenderingContext): void {
     this.world.each([Position, Health], (_, p, h) => {
       ctx.strokeStyle = "red";
       ctx.fillStyle = "red";
       ctx.strokeRect(p.x, p.y + 16, 16, 4);
       ctx.fillRect(p.x, p.y + 16, 16 * h.percentage, 4);
     });
-    this.renderHud(ctx);
+  }
+
+  private renderAttackCooldowns(ctx: RenderingContext): void {
+    this.world.each([Position, Attack], (_, p, a) => {
+      ctx.fillStyle = "rgb(90, 90, 232)";
+      ctx.strokeStyle = "rgb(90, 90, 232)";
+      ctx.strokeRect(p.x, p.y, 16, 4);
+      ctx.fillRect(p.x, p.y, (16 * a.cooldownTimer) / a.interval, 4);
+    });
   }
 
   private renderCreature(
