@@ -20,6 +20,7 @@ import {
   RangedAttack,
   Scaled,
   XpDonor,
+  Minion,
 } from "./components";
 import {
   projectileSpeed,
@@ -29,6 +30,7 @@ import {
   spawnWizard,
   chooseEnemySpawningFunction,
   getEnemySpawnChances,
+  spawnSkeleton,
 } from "./entities";
 import { clamp, randomInRange, predictEnemyPosition } from "./math";
 import { Upgrade } from "./levelup";
@@ -55,6 +57,8 @@ export class GameScene implements Scene {
   private fireballPierce = 0;
   private enemyTimer = 0;
   private enemyInterval = 3;
+  private minionTimer = 0;
+  private minionInterval = 5;
   private xp = 0;
   private nextLevelXp = 5;
   private upgradeChoices: Upgrade[] | null = null;
@@ -154,10 +158,12 @@ export class GameScene implements Scene {
       return;
     }
 
+    this.spawnMinions(dt);
     this.spawnEnemies(dt);
     this.spawnFireballs(dt);
     this.updateAnimations(dt);
     this.resolveEnemyAttacks(dt);
+    this.moveMinions(dt);
     this.moveEnemies(dt);
     this.updateProjectiles(dt);
   }
@@ -193,6 +199,14 @@ export class GameScene implements Scene {
       this.xp += xpDonation.xp;
     }
     this.world.destroy(e);
+  }
+
+  private spawnMinions(dt: number): void {
+    this.minionTimer += dt;
+    if (this.minionTimer >= this.minionInterval) {
+      spawnSkeleton(this.world);
+      this.minionTimer = 0;
+    }
   }
 
   private spawnEnemies(dt: number): void {
@@ -304,6 +318,12 @@ export class GameScene implements Scene {
     this.world.each([Jitter], (_, j) => {
       j.x = clamp(j.x + randomInRange(-1, 1), -3, 3);
       j.y = clamp(j.y + randomInRange(-1, 1), -3, 3);
+    });
+  }
+
+  private moveMinions(dt: number): void {
+    this.world.each([Position, Movement, Minion], (e, position, movement) => {
+      position.x += movement.speed * dt;
     });
   }
 

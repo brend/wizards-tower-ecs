@@ -13,6 +13,7 @@ import {
   RangedAttack,
   Scaled,
   XpDonor,
+  Minion,
 } from "./components";
 
 const width = 320;
@@ -89,6 +90,17 @@ export function spawnGargoyle(world: World): Entity {
     new SineFlight(4, 32, 0),
     new RangedAttack(),
     new XpDonor(2),
+  );
+}
+
+export function spawnSkeleton(world: World): Entity {
+  return world.create(
+    new Sprite("assets/Skeleton.png", 2),
+    new Position(260, 126),
+    new Health(2),
+    new Animated(),
+    new Minion(),
+    new Movement(-16),
   );
 }
 

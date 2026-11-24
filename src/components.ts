@@ -67,6 +67,8 @@ export class Enemy {
   ) {}
 }
 
+export class Minion {}
+
 export class Projectile {
   constructor(
     public damage: number,
