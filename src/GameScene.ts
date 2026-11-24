@@ -211,7 +211,11 @@ export class GameScene implements Scene {
         enemy.target = undefined;
         this.defer(() => {
           this.world.remove(e, halted);
-          this.world.remove(e, attack);
+          // have the enemy keep attacking (the tower)
+          // if it's already reached its destination
+          if (this.world.has(e, Destination)) {
+            this.world.remove(e, attack);
+          }
         });
       }
     });
