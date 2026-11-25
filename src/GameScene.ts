@@ -50,6 +50,7 @@ export class GameScene implements Scene {
 
   private readonly grassSprite = new OrbSprite("assets/Ground-1.png");
   private readonly groundSprite = new OrbSprite("assets/Ground-2.png");
+  private readonly orbSprite = new OrbSprite("assets/Orb-Empty.png");
 
   private readonly voicePlayer = loadVoices();
 
@@ -74,7 +75,6 @@ export class GameScene implements Scene {
   ) {
     spawnWizard(this.world);
     this.tower = spawnTower(this.world);
-
     spawnOrk(this.world);
   }
 
@@ -115,6 +115,7 @@ export class GameScene implements Scene {
     this.applyUpgrade(choice.name);
     this.upgradeLevels.set(choice.name, this.getUpgradeLevel(choice.name) + 1);
     this.nextLevelXp = this.nextLevelXp * 1.5; // TODO: Find better algorithm
+    this.xp = 0;
     this.upgradeChoices = null;
     this.state = "playing";
   }
@@ -607,7 +608,7 @@ export class GameScene implements Scene {
       this.renderCreature(ctx, e, s, p);
     });
     this.renderGround(ctx);
-    this.renderHealthBars(ctx);
+    //this.renderHealthBars(ctx);
     this.renderAttackCooldowns(ctx);
     this.renderHud(ctx);
   }
@@ -663,9 +664,12 @@ export class GameScene implements Scene {
   }
 
   private renderHud(ctx: RenderingContext): void {
-    ctx.fillStyle = "white";
-    ctx.font = "6px monospace";
-    ctx.fillText(`XP: ${this.xp}`, 290, 20);
+    // the mana-filled orb represents the XP
+    const xpPercentToNextLevel = this.xp / this.nextLevelXp;
+    const manaBars = Math.ceil(6 * xpPercentToNextLevel);
+    ctx.fillStyle = "#0dbcfc";
+    ctx.fillRect(281, 43 + 6 - manaBars, 8, manaBars);
+    this.orbSprite.render(ctx, 281, 42);
 
     const upgrades = this.upgradeChoices;
     if (this.state === "levelup" && upgrades !== null) {
@@ -691,9 +695,6 @@ export class GameScene implements Scene {
       });
       ctx.restore();
     }
-
-    ctx.fillStyle = "white";
-    ctx.fillText(`fireballInterval: ${this.fireballInterval}`, 0, 160);
   }
 
   private playVoice(name: string): void {
