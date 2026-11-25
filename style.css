@@ -1,3 +1,17 @@
+@font-face {
+  font-family: "Dogica Pixel";
+  src: url("/assets/fonts/dogica/dogicapixel.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Dogica Pixel";
+  src: url("/assets/fonts/dogica/dogicapixelbold.ttf") format("truetype");
+  font-weight: 700;
+  font-display: swap;
+}
+
 body {
   margin: 0;
   min-height: 100dvh;
@@ -18,7 +32,7 @@ body {
   border: 1px solid #e4be69;
   background: #172036;
   color: #fff;
-  font: inherit;
+  font: 700 16px/1 "Dogica Pixel", monospace;
   cursor: pointer;
 }
 

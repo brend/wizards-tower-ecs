@@ -41,6 +41,9 @@ import { loadVoices } from "./sound";
 type RenderingContext = CanvasRenderingContext2D;
 type GameState = "playing" | "levelup";
 
+const upgradeLabelSize = 8;
+export const upgradeLabelFont = `${upgradeLabelSize}px "Dogica Pixel", monospace`;
+
 export class GameScene implements Scene {
   private readonly world = new World();
 
@@ -142,10 +145,10 @@ export class GameScene implements Scene {
 
   private getUpgradeBounds(index: number, count: number) {
     const columnWidth = this.width / count;
-    const width = Math.min(64, columnWidth - 8);
-    const height = 44;
+    const width = Math.min(72, columnWidth - 8);
+    const height = 48;
     return {
-      x: (index + 0.5) * columnWidth - width / 2,
+      x: Math.round((index + 0.5) * columnWidth - width / 2),
       y: (this.height - height) / 2,
       width,
       height,
@@ -676,7 +679,9 @@ export class GameScene implements Scene {
       ctx.save();
       ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
       ctx.fillRect(0, 0, this.width, this.height);
+      ctx.font = upgradeLabelFont;
       ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
       ctx.strokeStyle = "white";
       upgrades.forEach((upgrade, index) => {
         const { x, y, width, height } = this.getUpgradeBounds(
@@ -688,7 +693,12 @@ export class GameScene implements Scene {
         ctx.fillRect(x, y, width, height);
         ctx.strokeRect(x, y, width, height);
         ctx.fillStyle = "white";
-        ctx.fillText(upgrade.name, centerX, y + height - 6);
+        const labelLines = upgrade.name.split(" ");
+        const firstLineY =
+          y + height - 10 - ((labelLines.length - 1) * upgradeLabelSize) / 2;
+        labelLines.forEach((line, lineIndex) => {
+          ctx.fillText(line, centerX, firstLineY + lineIndex * upgradeLabelSize);
+        });
         const spritex = centerX - upgrade.sprite.width / 2;
         const spritey = y + 4;
         upgrade.sprite.render(ctx, spritex, spritey);

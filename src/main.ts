@@ -1,5 +1,9 @@
 import { Engine } from "@waldrumpus/orb";
-import { GameScene } from "./GameScene";
+import { GameScene, upgradeLabelFont } from "./GameScene";
+
+void document.fonts.load(upgradeLabelFont).catch((error) => {
+  console.error("Could not load the upgrade label font", error);
+});
 
 const width = 320;
 const height = 180;
