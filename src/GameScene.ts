@@ -95,7 +95,7 @@ export class GameScene implements Scene {
     }
   }
 
-  private updateLevelupScreen(dt: number): void {}
+  private updateLevelupScreen(_dt: number): void {}
 
   onPointerDown(x: number, y: number): void {
     const choices = this.upgradeChoices;
@@ -639,10 +639,8 @@ export class GameScene implements Scene {
     let sprite = this.grassSprite;
 
     for (let y = 140; y < this.height; y += 16) {
-      sprite.y = y;
       for (let x = 0; x < this.width; x += 16) {
-        sprite.x = x;
-        sprite.render(ctx);
+        sprite.render(ctx, x, y);
       }
       sprite = this.groundSprite;
     }
@@ -671,9 +669,9 @@ export class GameScene implements Scene {
         ctx.strokeRect(x, y, width, height);
         ctx.fillStyle = "white";
         ctx.fillText(upgrade.name, centerX, y + height - 6);
-        upgrade.sprite.x = centerX - upgrade.sprite.width / 2;
-        upgrade.sprite.y = y + 4;
-        upgrade.sprite.render(ctx);
+        const spritex = centerX - upgrade.sprite.width / 2;
+        const spritey = y + 4;
+        upgrade.sprite.render(ctx, spritex, spritey);
       });
       ctx.restore();
     }

@@ -8,13 +8,11 @@ export class Sprite {
   }
 
   get height(): number {
-    return this.sprite.h;
+    return this.sprite.height;
   }
 
   render(ctx: CanvasRenderingContext2D, x: number, y: number): void {
-    this.sprite.x = x;
-    this.sprite.y = y;
-    this.sprite.render(ctx);
+    this.sprite.render(ctx, x, y);
   }
 
   update(dt: number): void {
