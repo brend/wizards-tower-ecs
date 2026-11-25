@@ -34,7 +34,7 @@ import {
   getEnemySpawnChances,
   spawnSkeleton,
 } from "./entities";
-import { clamp, randomInRange, predictEnemyPosition } from "./math";
+import { clamp, randomInRange, predictEnemyPosition, shuffle } from "./math";
 import { Upgrade } from "./levelup";
 import { loadVoices } from "./sound";
 
@@ -121,13 +121,14 @@ export class GameScene implements Scene {
 
   private applyUpgrade(name: string): void {
     switch (name) {
-      case "Life":
-        this.world.get(this.tower, Health)!.increase(1);
-        break;
-      case "Speed":
+      case "Hurl Speed":
         this.fireballInterval *= 0.9;
         break;
       case "Piercing":
+        break;
+      case "Skeleton Frequency":
+        break;
+      case "Skeleton Quality":
         break;
       default:
         throw new Error(`unknown upgrade name: "${name}"`);
@@ -172,15 +173,30 @@ export class GameScene implements Scene {
     this.updateProjectiles(dt);
   }
 
-  private rollUpgrades(): Upgrade[] {
+  private allUpgrades(): Upgrade[] {
     return [
-      { name: "Life", sprite: new OrbSprite("assets/Upgrade-Tower.png") },
-      { name: "Speed", sprite: new OrbSprite("assets/Upgrade-Fireball.png") },
+      {
+        name: "Hurl Speed",
+        sprite: new OrbSprite("assets/Upgrade-Fireball.png"),
+      },
       {
         name: "Piercing",
         sprite: new OrbSprite("assets/Upgrade-Fireball.png"),
       },
+      {
+        name: "Skeleton Frequency",
+        sprite: new OrbSprite("assets/Upgrade-Skeleton.png"),
+      },
+      {
+        name: "Skeleton Quality",
+        sprite: new OrbSprite("assets/Upgrade-Skeleton.png"),
+      },
     ];
+  }
+
+  private rollUpgrades(): Upgrade[] {
+    const allUpgradesRandomized = shuffle(this.allUpgrades());
+    return allUpgradesRandomized.slice(0, 3);
   }
 
   private removeDeadEnemies(): void {
