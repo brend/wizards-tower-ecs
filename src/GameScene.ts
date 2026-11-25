@@ -609,7 +609,7 @@ export class GameScene implements Scene {
     });
     this.renderGround(ctx);
     //this.renderHealthBars(ctx);
-    this.renderAttackCooldowns(ctx);
+    //this.renderAttackCooldowns(ctx);
     this.renderHud(ctx);
   }
 
