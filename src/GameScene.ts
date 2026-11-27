@@ -186,8 +186,6 @@ export class GameScene implements Scene {
   private increaseDifficulty(dt: number) {
     this.elapsed += dt;
 
-    const b4 = this.difficultyLevel;
-
     if (this.difficultyLevel === 0 && this.elapsed >= 30) {
       this.difficultyLevel += 1;
       this.enemyInterval = 2.8;
@@ -240,10 +238,6 @@ export class GameScene implements Scene {
         [spawnGargoyle, 0.25],
         [spawnHulk, 0.25],
       ]);
-    }
-
-    if (this.difficultyLevel !== b4) {
-      console.log("difficulty increased to ", this.difficultyLevel);
     }
   }
 
