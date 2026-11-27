@@ -145,11 +145,3 @@ export function chooseEnemySpawningFunction(
 
   return spawnOrk;
 }
-
-export function getEnemySpawnChances(): Map<EnemySpawner, number> {
-  return new Map<EnemySpawner, number>([
-    [spawnGargoyle, 0.15],
-    [spawnRunner, 0.15],
-    [spawnHulk, 0.05],
-  ]);
-}

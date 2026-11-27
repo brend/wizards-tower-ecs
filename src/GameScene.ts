@@ -31,8 +31,11 @@ import {
   spawnTower,
   spawnWizard,
   chooseEnemySpawningFunction,
-  getEnemySpawnChances,
   spawnSkeleton,
+  spawnGargoyle,
+  spawnHulk,
+  spawnRunner,
+  EnemySpawner,
 } from "./entities";
 import { clamp, randomInRange, predictEnemyPosition, shuffle } from "./math";
 import { Upgrade } from "./levelup";
@@ -58,6 +61,8 @@ export class GameScene implements Scene {
   private readonly voicePlayer = loadVoices();
 
   private state: GameState = "playing";
+  private elapsed = 0;
+  private difficultyLevel = 0;
   private fireballTimer = 0;
   private fireballInterval = 1.5;
   private fireballPierce = 0;
@@ -70,7 +75,7 @@ export class GameScene implements Scene {
   private upgradeChoices: Upgrade[] | null = null;
   private readonly upgradeLevels = new Map<Upgrade["name"], number>();
 
-  private readonly enemySpawnChances = getEnemySpawnChances();
+  private enemySpawnChances = new Map<EnemySpawner, number>();
 
   constructor(
     private readonly width: number,
@@ -166,6 +171,7 @@ export class GameScene implements Scene {
       return;
     }
 
+    this.increaseDifficulty(dt);
     this.spawnMinions(dt);
     this.spawnEnemies(dt);
     this.spawnFireballs(dt);
@@ -175,6 +181,70 @@ export class GameScene implements Scene {
     this.moveEnemies(dt);
     this.moveMinions(dt);
     this.updateProjectiles(dt);
+  }
+
+  private increaseDifficulty(dt: number) {
+    this.elapsed += dt;
+
+    const b4 = this.difficultyLevel;
+
+    if (this.difficultyLevel === 0 && this.elapsed >= 30) {
+      this.difficultyLevel += 1;
+      this.enemyInterval = 2.8;
+      this.enemySpawnChances = new Map([
+        [spawnOrk, 0.85],
+        [spawnRunner, 0.1],
+        [spawnGargoyle, 0.05],
+      ]);
+    }
+
+    if (this.difficultyLevel === 1 && this.elapsed >= 60) {
+      this.difficultyLevel += 1;
+      this.enemyInterval = 2.4;
+      this.enemySpawnChances = new Map([
+        [spawnOrk, 0.65],
+        [spawnRunner, 0.15],
+        [spawnGargoyle, 0.15],
+        [spawnHulk, 0.5],
+      ]);
+    }
+
+    if (this.difficultyLevel === 2 && this.elapsed >= 2 * 60) {
+      this.difficultyLevel += 1;
+      this.enemyInterval = 1.9;
+      this.enemySpawnChances = new Map([
+        [spawnOrk, 0.5],
+        [spawnRunner, 0.2],
+        [spawnGargoyle, 0.2],
+        [spawnHulk, 0.1],
+      ]);
+    }
+
+    if (this.difficultyLevel === 3 && this.elapsed >= 3 * 60) {
+      this.difficultyLevel += 1;
+      this.enemyInterval = 1.5;
+      this.enemySpawnChances = new Map([
+        [spawnOrk, 0.35],
+        [spawnRunner, 0.2],
+        [spawnGargoyle, 0.25],
+        [spawnHulk, 0.2],
+      ]);
+    }
+
+    if (this.difficultyLevel === 4 && this.elapsed >= 4 * 60) {
+      this.difficultyLevel += 1;
+      this.enemyInterval = 1.4;
+      this.enemySpawnChances = new Map([
+        [spawnOrk, 0.3],
+        [spawnRunner, 0.2],
+        [spawnGargoyle, 0.25],
+        [spawnHulk, 0.25],
+      ]);
+    }
+
+    if (this.difficultyLevel !== b4) {
+      console.log("difficulty increased to ", this.difficultyLevel);
+    }
   }
 
   private allUpgrades(): Upgrade[] {
@@ -697,7 +767,11 @@ export class GameScene implements Scene {
         const firstLineY =
           y + height - 10 - ((labelLines.length - 1) * upgradeLabelSize) / 2;
         labelLines.forEach((line, lineIndex) => {
-          ctx.fillText(line, centerX, firstLineY + lineIndex * upgradeLabelSize);
+          ctx.fillText(
+            line,
+            centerX,
+            firstLineY + lineIndex * upgradeLabelSize,
+          );
         });
         const spritex = centerX - upgrade.sprite.width / 2;
         const spritey = y + 4;
